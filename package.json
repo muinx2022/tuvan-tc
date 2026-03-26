@@ -1,0 +1,16 @@
+{
+  "name": "tuvan-tc",
+  "private": true,
+  "scripts": {
+    "dev": "powershell -ExecutionPolicy Bypass -File .\\scripts\\dev-run.ps1",
+    "dev:backend": "powershell -ExecutionPolicy Bypass -Command \"Set-Location 'backend'; if (Test-Path '..\\\\.venv\\\\Scripts\\\\python.exe') { ..\\\\.venv\\\\Scripts\\\\python.exe manage.py runserver 0.0.0.0:8080 } else { python manage.py runserver 0.0.0.0:8080 }\"",
+    "dev:web": "powershell -ExecutionPolicy Bypass -Command \"Set-Location 'web'; npm run dev -- --hostname 0.0.0.0\"",
+    "dev:admin": "powershell -ExecutionPolicy Bypass -Command \"Set-Location 'admin'; npm run dev -- --host 0.0.0.0 --port 5173\"",
+    "dev:t0-worker": "powershell -ExecutionPolicy Bypass -Command \"Set-Location 'backend'; if (Test-Path '..\\\\.venv\\\\Scripts\\\\python.exe') { ..\\\\.venv\\\\Scripts\\\\python.exe manage.py run_t0_worker } else { python manage.py run_t0_worker }\"",
+    "dev:t0-foreign-worker": "powershell -ExecutionPolicy Bypass -Command \"Set-Location 'backend'; if (Test-Path '..\\\\.venv\\\\Scripts\\\\python.exe') { ..\\\\.venv\\\\Scripts\\\\python.exe manage.py run_t0_foreign_worker } else { python manage.py run_t0_foreign_worker }\"",
+    "dev:foreign-worker": "powershell -ExecutionPolicy Bypass -Command \"Set-Location 'backend'; if (Test-Path '..\\\\.venv\\\\Scripts\\\\python.exe') { ..\\\\.venv\\\\Scripts\\\\python.exe manage.py run_foreign_backfill_worker } else { python manage.py run_foreign_backfill_worker }\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

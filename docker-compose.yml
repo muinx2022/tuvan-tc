@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: mvp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mvpdb
+      POSTGRES_USER: mvp
+      POSTGRES_PASSWORD: mvp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mvp-backend-django
+    working_dir: /app
+    command: sh -c "python manage.py seed 2>/dev/null || true && python manage.py runserver 0.0.0.0:8080"
+    volumes:
+      - ./backend:/app
+    environment:
+      DATABASE_URL: postgresql://mvp:mvp@postgres:5432/mvpdb
+      APP_CORS_WEB_ORIGIN: http://localhost:3000
+      APP_CORS_ADMIN_ORIGIN: http://localhost:5173
+      APP_MEDIA_PUBLIC_BASE_URL: http://localhost:8080
+      DJANGO_SECRET_KEY: dev-secret-change-in-prod
+      DEBUG: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+  web:
+    image: node:22-alpine
+    container_name: mvp-web
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    volumes:
+      - ./web:/app
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  admin:
+    image: node:22-alpine
+    container_name: mvp-admin
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    volumes:
+      - ./admin:/app
+    environment:
+      VITE_API_URL: http://localhost:8080/api/v1
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
