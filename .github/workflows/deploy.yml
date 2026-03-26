@@ -76,7 +76,7 @@ jobs:
           file: ./admin/Dockerfile.prod
           push: true
           build-args: |
-            VITE_API_URL=/api/v1
+            VITE_API_URL=https://api.gikky.net/api/v1
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tuvan-tc-admin:main
             ${{ secrets.DOCKERHUB_USERNAME }}/tuvan-tc-admin:${{ github.sha }}
