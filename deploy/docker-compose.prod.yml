@@ -37,10 +37,7 @@ services:
       - shared-network
 
   backend:
-    image: ${BACKEND_IMAGE:-gikky-backend:local}
-    build:
-      context: ../backend
-      dockerfile: Dockerfile.prod
+    image: ${BACKEND_IMAGE}
     container_name: gikky-backend
     restart: unless-stopped
     depends_on:
@@ -73,12 +70,7 @@ services:
       - shared-network
 
   web:
-    image: ${WEB_IMAGE:-gikky-web:local}
-    build:
-      context: ../web
-      dockerfile: Dockerfile.prod
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    image: ${WEB_IMAGE}
     container_name: gikky-web
     restart: unless-stopped
     depends_on:
@@ -90,12 +82,7 @@ services:
       - shared-network
 
   admin:
-    image: ${ADMIN_IMAGE:-gikky-admin:local}
-    build:
-      context: ../admin
-      dockerfile: Dockerfile.prod
-      args:
-        VITE_API_URL: ${VITE_API_URL}
+    image: ${ADMIN_IMAGE}
     container_name: gikky-admin
     restart: unless-stopped
     depends_on:

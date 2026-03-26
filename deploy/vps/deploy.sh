@@ -57,7 +57,8 @@ deploy_with_retry() {
   local attempt=1
 
   while true; do
-    if docker compose --env-file .env -f "$COMPOSE_FILE" up -d --build --no-deps "${SERVICES[@]}"; then
+    if docker compose --env-file .env -f "$COMPOSE_FILE" pull "${SERVICES[@]}" && \
+      docker compose --env-file .env -f "$COMPOSE_FILE" up -d --no-deps "${SERVICES[@]}"; then
       return 0
     fi
 
@@ -75,6 +76,5 @@ deploy_with_retry() {
 deploy_with_retry
 docker compose --env-file .env -f "$COMPOSE_FILE" ps "${SERVICES[@]}"
 docker image prune -f || true
-docker builder prune -f --filter "until=168h" || true
 
 echo "[$(date -Iseconds)] Deploy complete"
