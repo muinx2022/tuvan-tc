@@ -1,0 +1,76 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: gikky-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    image: ${BACKEND_IMAGE:-gikky-backend:local}
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.prod
+    container_name: gikky-backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DEBUG: ${DEBUG}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      APP_JWT_SECRET: ${APP_JWT_SECRET}
+      APP_JWT_ACCESS_TOKEN_MINUTES: ${APP_JWT_ACCESS_TOKEN_MINUTES}
+      APP_JWT_REFRESH_TOKEN_DAYS: ${APP_JWT_REFRESH_TOKEN_DAYS}
+      APP_AUTH_PASSWORD_RESET_MINUTES: ${APP_AUTH_PASSWORD_RESET_MINUTES}
+      APP_AUTH_PASSWORD_RESET_EXPOSE_TOKEN: ${APP_AUTH_PASSWORD_RESET_EXPOSE_TOKEN}
+      APP_GOOGLE_CLIENT_ID: ${APP_GOOGLE_CLIENT_ID}
+      APP_SEED_ADMIN_EMAIL: ${APP_SEED_ADMIN_EMAIL}
+      APP_SEED_ADMIN_PASSWORD: ${APP_SEED_ADMIN_PASSWORD}
+      APP_CORS_WEB_ORIGIN: ${APP_CORS_WEB_ORIGIN}
+      APP_CORS_ADMIN_ORIGIN: ${APP_CORS_ADMIN_ORIGIN}
+      APP_MEDIA_PUBLIC_BASE_URL: ${APP_MEDIA_PUBLIC_BASE_URL}
+      APP_LOG_REQUESTS: ${APP_LOG_REQUESTS}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT}
+    ports:
+      - "8080:8080"
+    volumes:
+      - media_data:/app/media
+
+  web:
+    image: ${WEB_IMAGE:-gikky-web:local}
+    build:
+      context: ../web
+      dockerfile: Dockerfile.prod
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: gikky-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+  admin:
+    image: ${ADMIN_IMAGE:-gikky-admin:local}
+    build:
+      context: ../admin
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    container_name: gikky-admin
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres_data:
+  media_data:
