@@ -430,7 +430,7 @@ export function T0DataPage() {
   );
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size="large">
+    <Space direction="vertical" style={{ width: "100%" }} size="large" className="t0-page">
       <div>
         <Typography.Title level={3} style={{ marginBottom: 0 }}>
           Du lieu T0
@@ -440,15 +440,15 @@ export function T0DataPage() {
         </Typography.Text>
       </div>
 
-      <Card>
-        <Space size="large" wrap>
+      <Card className="t0-status-card">
+        <Space size="large" wrap className="t0-status-stats">
           <Statistic title="Worker" value={status?.connected ? "Connected" : status?.running ? "Running" : "Stopped"} />
           <Statistic title="Phase" value={status?.phase ?? "-"} />
           <Statistic title="Subscribed" value={status?.subscribedCount ?? 0} />
           <Statistic title="Last Snapshot" value={status?.lastSnapshotSlot ?? "-"} />
         </Space>
         {statusLoading ? <Typography.Text type="secondary">Dang tai trang thai...</Typography.Text> : null}
-        <Descriptions size="small" column={2} style={{ marginTop: 16 }}>
+        <Descriptions size="small" column={2} style={{ marginTop: 16 }} className="t0-status-descriptions">
           <Descriptions.Item label="DNSE key">{status?.dnseKeyMasked ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="Auth success">{formatDateTime(status?.authSuccessAt)}</Descriptions.Item>
           <Descriptions.Item label="Connection started">{formatDateTime(status?.connectionStartedAt)}</Descriptions.Item>
@@ -577,7 +577,7 @@ export function T0DataPage() {
           </div>
         ) : timeline?.timeline.length ? (
           <Space direction="vertical" style={{ width: "100%" }} size="middle">
-            <Descriptions size="small" column={2}>
+            <Descriptions size="small" column={2} className="t0-timeline-descriptions">
               <Descriptions.Item label="Ticker">{timeline.ticker}</Descriptions.Item>
               <Descriptions.Item label="Ngay">{timeline.tradingDate}</Descriptions.Item>
               <Descriptions.Item label="Row dang xem">{selectedTimelineRow?.snapshotSlot ?? "-"}</Descriptions.Item>

@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { Alert, Button, Card, Descriptions, Input, Space, Table, Tag, Typography, message } from "antd";
+import { Alert, Button, Card, Descriptions, Grid, Input, Space, Table, Tag, Typography, message } from "antd";
 import { EditOutlined, EyeOutlined, LoadingOutlined, ReloadOutlined, SyncOutlined } from "@ant-design/icons";
 import { useEffect, useRef, useState } from "react";
 import { apiClient, type ApiEnvelope } from "../lib/api";
@@ -59,6 +59,8 @@ type HistorySyncStatus = {
 };
 
 export function StockFinanceChartsPage() {
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -193,11 +195,11 @@ export function StockFinanceChartsPage() {
   }, [chartRunning, data.page, data.size, tickerFilter]);
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size="large">
+    <Space direction="vertical" style={{ width: "100%" }} size="large" className="finance-charts-page">
       <Typography.Title level={3}>Vietstock Finance Charts</Typography.Title>
-      <Card loading={statusLoading}>
-        <Space wrap style={{ width: "100%", justifyContent: "space-between" }}>
-          <Descriptions size="small" column={3}>
+      <Card loading={statusLoading} className="finance-charts-status-card">
+        <Space wrap style={{ width: "100%", justifyContent: "space-between" }} className="finance-charts-status-wrap">
+          <Descriptions size="small" column={isMobile ? 1 : 3} className="finance-charts-status-descriptions">
             <Descriptions.Item label="Trang thai">
               <Tag color={status?.status === "RUNNING" ? "processing" : status?.status === "FAILED" ? "error" : "default"}>
                 <Space size={6}>
@@ -222,7 +224,7 @@ export function StockFinanceChartsPage() {
               {historyRunning ? `Dang chay (${historyStatus?.mode ?? "INCREMENTAL"} | ${historyStatus?.phase ?? "..."})` : "Khong chay"}
             </Descriptions.Item>
           </Descriptions>
-          <Space>
+          <Space className="finance-charts-status-actions">
             <Button
               type="primary"
               icon={<SyncOutlined />}
@@ -253,14 +255,15 @@ export function StockFinanceChartsPage() {
         ) : null}
       </Card>
 
-      <Card>
-        <Space wrap style={{ marginBottom: 12 }}>
+      <Card className="finance-charts-table-card">
+        <Space wrap style={{ marginBottom: 12 }} className="finance-charts-filters">
           <Input
             placeholder="Loc theo ticker"
             value={tickerFilter}
             onChange={(event) => setTickerFilter(event.target.value)}
             onPressEnter={() => void loadTickers(0, data.size, tickerFilter)}
-            style={{ width: 220 }}
+            className="finance-charts-filter-input"
+            style={{ width: isMobile ? "100%" : 220 }}
           />
           <Button type="primary" onClick={() => void loadTickers(0, data.size, tickerFilter)}>
             Tim
@@ -279,6 +282,7 @@ export function StockFinanceChartsPage() {
         </Space>
 
         <Table<StockFinanceChartTickerItem>
+          className="finance-charts-table"
           rowKey={(record) => record.ticker}
           loading={loading}
           dataSource={data.items}
@@ -328,6 +332,7 @@ export function StockFinanceChartsPage() {
               void loadTickers(page - 1, pageSize, tickerFilter);
             },
           }}
+          scroll={{ x: 980 }}
         />
       </Card>
     </Space>

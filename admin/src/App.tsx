@@ -9,6 +9,7 @@ import {
   FileTextOutlined,
   FolderOpenOutlined,
   LogoutOutlined,
+  MenuOutlined,
   MoonOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
@@ -17,9 +18,9 @@ import {
   TeamOutlined,
   LineChartOutlined,
 } from "@ant-design/icons";
-import { Button, ConfigProvider, Menu, Switch, Typography, theme as antdTheme } from "antd";
+import { Button, ConfigProvider, Drawer, Grid, Menu, Switch, Typography, theme as antdTheme } from "antd";
 import type { MenuProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BrowserRouter,
   Link,
@@ -49,7 +50,7 @@ import { ForeignTradingPage } from "./pages/foreign-trading";
 
 const THEME_STORAGE_KEY = "admin_theme_mode";
 
-function AdminMenu() {
+function AdminMenu({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const items: MenuProps["items"] = [
     {
@@ -113,6 +114,7 @@ function AdminMenu() {
       mode="inline"
       selectedKeys={[selectedKey]}
       items={items}
+      onClick={onNavigate}
       style={{ width: "100%", border: "none" }}
     />
   );
@@ -121,6 +123,9 @@ function AdminMenu() {
 function ProtectedLayout({ isDark, onToggleTheme }: { isDark: boolean; onToggleTheme: (checked: boolean) => void }) {
   const { mutate: logout } = useLogout();
   const location = useLocation();
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.lg;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const titleByPath: Record<string, string> = {
     "/dashboard": "Dashboard",
     "/posts": "Post Management",
@@ -140,7 +145,7 @@ function ProtectedLayout({ isDark, onToggleTheme }: { isDark: boolean; onToggleT
 
   return (
     <div className={`admin-shell ${isDark ? "admin-shell-dark" : ""}`}>
-      <aside className="admin-sidebar">
+      {!isMobile ? <aside className="admin-sidebar">
         <div className="admin-brand">
           <DatabaseOutlined />
           <div>
@@ -163,25 +168,73 @@ function ProtectedLayout({ isDark, onToggleTheme }: { isDark: boolean; onToggleT
             Logout
           </Button>
         </div>
-      </aside>
+      </aside> : null}
+
+      <Drawer
+        className={`admin-mobile-drawer ${isDark ? "admin-mobile-drawer-dark" : ""}`}
+        placement="left"
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        closable={false}
+        width={300}
+        styles={{ body: { padding: 0 } }}
+      >
+        <aside className="admin-sidebar admin-sidebar-mobile">
+          <div className="admin-brand">
+            <DatabaseOutlined />
+            <div>
+              <Typography.Text strong style={{ color: "#fff", display: "block" }}>
+                Stock Admin
+              </Typography.Text>
+              <Typography.Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 12 }}>
+                Operations Console
+              </Typography.Text>
+            </div>
+          </div>
+          <AdminMenu onNavigate={() => setMobileMenuOpen(false)} />
+          <div className="admin-sidebar-footer">
+            <Button
+              icon={<LogoutOutlined />}
+              onClick={() => logout()}
+              className="admin-logout-btn"
+              block
+            >
+              Logout
+            </Button>
+          </div>
+        </aside>
+      </Drawer>
 
       <main className="admin-main">
         <header className="admin-topbar">
-          <div>
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              {activeTitle}
-            </Typography.Title>
-            <Typography.Text type="secondary">Manage resources, permissions, and data flow</Typography.Text>
+          <div className="admin-topbar-main">
+            {isMobile ? (
+              <Button
+                type="text"
+                icon={<MenuOutlined />}
+                className="admin-mobile-menu-btn"
+                onClick={() => setMobileMenuOpen(true)}
+                aria-label="Open navigation menu"
+              />
+            ) : null}
+            <div>
+              <Typography.Title level={4} style={{ margin: 0 }}>
+                {activeTitle}
+              </Typography.Title>
+              <Typography.Text type="secondary">Manage resources, permissions, and data flow</Typography.Text>
+            </div>
           </div>
-          <div className="admin-theme-toggle">
-            <MoonOutlined />
-            <Switch
-              size="small"
-              checked={isDark}
-              onChange={onToggleTheme}
-              checkedChildren={<BulbOutlined />}
-              unCheckedChildren={<BulbOutlined />}
-            />
+          <div className="admin-topbar-actions">
+            <div className="admin-theme-toggle">
+              <MoonOutlined />
+              <Switch
+                size="small"
+                checked={isDark}
+                onChange={onToggleTheme}
+                checkedChildren={<BulbOutlined />}
+                unCheckedChildren={<BulbOutlined />}
+              />
+            </div>
           </div>
         </header>
         <section className="admin-content">
@@ -193,20 +246,16 @@ function ProtectedLayout({ isDark, onToggleTheme }: { isDark: boolean; onToggleT
 }
 
 function App() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
+  const [isDark, setIsDark] = useState(() => {
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     if (storedTheme === "dark") {
-      setIsDark(true);
-      return;
+      return true;
     }
     if (storedTheme === "light") {
-      setIsDark(false);
-      return;
+      return false;
     }
-    setIsDark(window.matchMedia("(prefers-color-scheme: dark)").matches);
-  }, []);
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
 
   const configTheme = useMemo(
     () => ({

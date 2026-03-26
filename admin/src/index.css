@@ -3,6 +3,7 @@ body {
   background: #f4f7fb;
   color: #111827;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow-x: hidden;
 }
 
 #root {
@@ -26,6 +27,13 @@ body {
   position: sticky;
   top: 0;
   height: 100vh;
+}
+
+.admin-sidebar-mobile {
+  width: 100%;
+  height: 100%;
+  border-right: none;
+  position: static;
 }
 
 .admin-brand {
@@ -119,6 +127,29 @@ body {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
+.admin-topbar-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.admin-mobile-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
 .admin-theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -166,6 +197,15 @@ body {
   background: #111827;
   border-color: #27364f;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.admin-mobile-drawer .ant-drawer-content,
+.admin-mobile-drawer .ant-drawer-body {
+  background: transparent;
+}
+
+.admin-mobile-drawer .ant-drawer-content {
+  box-shadow: none;
 }
 
 .login-shell {
@@ -223,4 +263,214 @@ body {
 
 .login-shell-dark .login-card .ant-input::placeholder {
   color: #94a3b8 !important;
+}
+
+@media (max-width: 992px) {
+  .admin-shell {
+    display: block;
+  }
+
+  .admin-main {
+    padding: 12px;
+  }
+
+  .admin-topbar {
+    padding: 12px 14px;
+  }
+
+  .admin-content {
+    padding: 8px 12px 12px;
+    min-height: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .admin-topbar-main,
+  .admin-topbar-actions {
+    width: 100%;
+  }
+
+  .admin-topbar-actions {
+    justify-content: flex-start;
+  }
+
+  .admin-theme-toggle {
+    width: fit-content;
+  }
+
+  .login-card {
+    width: min(100%, 380px);
+  }
+
+  .ant-card {
+    border-radius: 12px !important;
+  }
+
+  .ant-card-body,
+  .ant-descriptions,
+  .ant-tabs-content-holder {
+    min-width: 0;
+  }
+
+  .ant-space {
+    row-gap: 8px !important;
+  }
+
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .ant-table-wrapper .ant-table {
+    min-width: 720px;
+  }
+
+  .ant-table-wrapper .ant-table-cell {
+    white-space: nowrap;
+  }
+
+  .ant-form-item {
+    margin-bottom: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-main {
+    padding: 10px;
+  }
+
+  .admin-topbar,
+  .admin-content {
+    border-radius: 12px;
+  }
+
+  .admin-topbar .ant-typography.ant-typography-secondary {
+    display: block;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .admin-mobile-drawer .ant-drawer-content-wrapper {
+    width: min(86vw, 300px) !important;
+  }
+
+  .admin-sidebar-mobile {
+    padding: 16px 12px;
+  }
+
+  .admin-brand {
+    margin: 4px 6px 14px;
+  }
+}
+
+.t0-status-stats {
+  width: 100%;
+}
+
+.t0-status-stats .ant-space-item {
+  min-width: 140px;
+}
+
+.t0-status-card .ant-statistic,
+.t0-status-card .ant-statistic-content,
+.t0-status-card .ant-statistic-content-value,
+.t0-status-card .ant-statistic-content-value span,
+.t0-status-descriptions .ant-descriptions-item-content,
+.t0-status-descriptions .ant-descriptions-item-label,
+.t0-timeline-descriptions .ant-descriptions-item-content,
+.t0-timeline-descriptions .ant-descriptions-item-label {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.t0-status-card .ant-statistic-content,
+.t0-status-card .ant-statistic-content-value,
+.t0-status-descriptions .ant-descriptions-item-content,
+.t0-timeline-descriptions .ant-descriptions-item-content {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .t0-status-stats {
+    gap: 12px 0 !important;
+  }
+
+  .t0-status-stats .ant-space-item {
+    flex: 1 1 calc(50% - 12px);
+    min-width: 148px;
+  }
+
+  .t0-status-card .ant-statistic {
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+  }
+
+  .t0-page .ant-descriptions {
+    overflow-x: auto;
+  }
+
+  .t0-page .ant-descriptions-view {
+    min-width: 520px;
+  }
+}
+
+@media (max-width: 480px) {
+  .t0-status-stats .ant-space-item {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+.t0-status-card .ant-statistic-content {
+  font-size: 20px;
+}
+}
+
+.finance-charts-status-wrap,
+.finance-charts-status-descriptions {
+  width: 100%;
+}
+
+.finance-charts-status-descriptions .ant-descriptions-view {
+  width: 100%;
+}
+
+.finance-charts-status-descriptions .ant-descriptions-item-content,
+.finance-charts-status-descriptions .ant-descriptions-item-label {
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 768px) {
+  .finance-charts-status-wrap,
+  .finance-charts-filters,
+  .finance-charts-status-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .finance-charts-status-actions .ant-btn,
+  .finance-charts-filters .ant-btn,
+  .finance-charts-filter-input {
+    width: 100%;
+  }
+
+  .finance-charts-status-card .ant-card-body,
+  .finance-charts-table-card .ant-card-body {
+    padding: 14px;
+  }
+
+  .finance-charts-status-descriptions .ant-descriptions-view {
+    min-width: 0;
+  }
+
+  .finance-charts-table .ant-table-pagination {
+    margin-bottom: 0;
+  }
 }
