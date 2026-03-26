@@ -1,4 +1,27 @@
 services:
+  deploy-listener:
+    build:
+      context: ./vps
+      dockerfile: Dockerfile
+    container_name: gikky-deploy-listener
+    restart: unless-stopped
+    environment:
+      DEPLOY_HOST: 0.0.0.0
+      DEPLOY_PORT: 8787
+      DEPLOY_WEBHOOK_TOKEN: ${DEPLOY_WEBHOOK_TOKEN}
+      DEPLOY_SCRIPT: /opt/gikky-deploy/deploy.sh
+      DEPLOY_COMPOSE_DIR: /workspace
+      DEPLOY_COMPOSE_FILE: deploy/docker-compose.prod.yml
+      DEPLOY_RETRIES: ${DEPLOY_RETRIES:-3}
+      DEPLOY_RETRY_DELAY: ${DEPLOY_RETRY_DELAY:-10}
+      COMPOSE_PROJECT_NAME: gikky-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../:/workspace
+    networks:
+      - gikky-network
+      - shared-network
+
   postgres:
     image: postgres:16
     container_name: gikky-postgres
