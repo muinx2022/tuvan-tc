@@ -49,6 +49,7 @@ echo "Ref: ${DEPLOY_REF:-unknown}"
 echo "SHA: $COMMIT_SHA"
 echo "Services: ${SERVICES[*]}"
 
+git config --global --add safe.directory "$DEPLOY_COMPOSE_DIR"
 git fetch origin main
 git reset --hard "$COMMIT_SHA"
 
