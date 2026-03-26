@@ -17,6 +17,7 @@ fi
 COMPOSE_FILE="${DEPLOY_COMPOSE_FILE:-deploy/docker-compose.prod.yml}"
 VALID_SERVICES=("backend" "web" "admin")
 SERVICES=()
+CONTAINERS=()
 DEPLOY_RETRIES="${DEPLOY_RETRIES:-3}"
 DEPLOY_RETRY_DELAY="${DEPLOY_RETRY_DELAY:-10}"
 
@@ -40,6 +41,7 @@ for service in "$@"; do
   fi
 
   SERVICES+=("$service")
+  CONTAINERS+=("gikky-$service")
 done
 
 cd "$DEPLOY_COMPOSE_DIR"
@@ -57,6 +59,8 @@ deploy_with_retry() {
   local attempt=1
 
   while true; do
+    docker rm -f "${CONTAINERS[@]}" >/dev/null 2>&1 || true
+
     if docker compose --env-file .env -f "$COMPOSE_FILE" pull "${SERVICES[@]}" && \
       docker compose --env-file .env -f "$COMPOSE_FILE" up -d --no-deps "${SERVICES[@]}"; then
       return 0
