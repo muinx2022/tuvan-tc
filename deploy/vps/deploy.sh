@@ -74,5 +74,7 @@ deploy_with_retry() {
 
 deploy_with_retry
 docker compose --env-file .env -f "$COMPOSE_FILE" ps "${SERVICES[@]}"
+docker image prune -f || true
+docker builder prune -f --filter "until=168h" || true
 
 echo "[$(date -Iseconds)] Deploy complete"
