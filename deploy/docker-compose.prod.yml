@@ -9,6 +9,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gikky-network
+      - shared-network
 
   backend:
     image: ${BACKEND_IMAGE:-gikky-backend:local}
@@ -39,9 +42,12 @@ services:
       GUNICORN_WORKERS: ${GUNICORN_WORKERS}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT}
     ports:
-      - "8080:8080"
+      - "8081:8080"
     volumes:
       - media_data:/app/media
+    networks:
+      - gikky-network
+      - shared-network
 
   web:
     image: ${WEB_IMAGE:-gikky-web:local}
@@ -55,7 +61,10 @@ services:
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      - "3004:3000"
+    networks:
+      - gikky-network
+      - shared-network
 
   admin:
     image: ${ADMIN_IMAGE:-gikky-admin:local}
@@ -69,8 +78,18 @@ services:
     depends_on:
       - backend
     ports:
-      - "5173:80"
+      - "3005:80"
+    networks:
+      - gikky-network
+      - shared-network
 
 volumes:
   postgres_data:
   media_data:
+
+networks:
+  gikky-network:
+    external: true
+    name: gikky-net_gikky-network
+  shared-network:
+    external: true
