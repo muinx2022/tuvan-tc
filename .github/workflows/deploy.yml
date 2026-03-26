@@ -76,7 +76,7 @@ jobs:
           file: ./admin/Dockerfile.prod
           push: true
           build-args: |
-            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_API_URL=/api/v1
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tuvan-tc-admin:main
             ${{ secrets.DOCKERHUB_USERNAME }}/tuvan-tc-admin:${{ github.sha }}
