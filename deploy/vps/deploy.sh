@@ -44,6 +44,11 @@ for service in "$@"; do
   CONTAINERS+=("gikky-$service")
 done
 
+if printf '%s\n' "${SERVICES[@]}" | grep -qx "backend"; then
+  SERVICES+=("t0-worker" "t0-foreign-worker" "foreign-backfill-worker")
+  CONTAINERS+=("gikky-t0-worker" "gikky-t0-foreign-worker" "gikky-foreign-backfill-worker")
+fi
+
 cd "$DEPLOY_COMPOSE_DIR"
 
 echo "[$(date -Iseconds)] Deploy start"

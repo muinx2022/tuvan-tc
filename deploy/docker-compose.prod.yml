@@ -1,3 +1,23 @@
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+  DEBUG: ${DEBUG}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+  APP_JWT_SECRET: ${APP_JWT_SECRET}
+  APP_JWT_ACCESS_TOKEN_MINUTES: ${APP_JWT_ACCESS_TOKEN_MINUTES}
+  APP_JWT_REFRESH_TOKEN_DAYS: ${APP_JWT_REFRESH_TOKEN_DAYS}
+  APP_AUTH_PASSWORD_RESET_MINUTES: ${APP_AUTH_PASSWORD_RESET_MINUTES}
+  APP_AUTH_PASSWORD_RESET_EXPOSE_TOKEN: ${APP_AUTH_PASSWORD_RESET_EXPOSE_TOKEN}
+  APP_GOOGLE_CLIENT_ID: ${APP_GOOGLE_CLIENT_ID}
+  APP_SEED_ADMIN_EMAIL: ${APP_SEED_ADMIN_EMAIL}
+  APP_SEED_ADMIN_PASSWORD: ${APP_SEED_ADMIN_PASSWORD}
+  APP_CORS_WEB_ORIGIN: ${APP_CORS_WEB_ORIGIN}
+  APP_CORS_ADMIN_ORIGIN: ${APP_CORS_ADMIN_ORIGIN}
+  APP_MEDIA_PUBLIC_BASE_URL: ${APP_MEDIA_PUBLIC_BASE_URL}
+  APP_LOG_REQUESTS: ${APP_LOG_REQUESTS}
+  GUNICORN_WORKERS: ${GUNICORN_WORKERS}
+  GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT}
+
 services:
   deploy-listener:
     build:
@@ -42,27 +62,51 @@ services:
     restart: unless-stopped
     depends_on:
       - postgres
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DEBUG: ${DEBUG}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-      APP_JWT_SECRET: ${APP_JWT_SECRET}
-      APP_JWT_ACCESS_TOKEN_MINUTES: ${APP_JWT_ACCESS_TOKEN_MINUTES}
-      APP_JWT_REFRESH_TOKEN_DAYS: ${APP_JWT_REFRESH_TOKEN_DAYS}
-      APP_AUTH_PASSWORD_RESET_MINUTES: ${APP_AUTH_PASSWORD_RESET_MINUTES}
-      APP_AUTH_PASSWORD_RESET_EXPOSE_TOKEN: ${APP_AUTH_PASSWORD_RESET_EXPOSE_TOKEN}
-      APP_GOOGLE_CLIENT_ID: ${APP_GOOGLE_CLIENT_ID}
-      APP_SEED_ADMIN_EMAIL: ${APP_SEED_ADMIN_EMAIL}
-      APP_SEED_ADMIN_PASSWORD: ${APP_SEED_ADMIN_PASSWORD}
-      APP_CORS_WEB_ORIGIN: ${APP_CORS_WEB_ORIGIN}
-      APP_CORS_ADMIN_ORIGIN: ${APP_CORS_ADMIN_ORIGIN}
-      APP_MEDIA_PUBLIC_BASE_URL: ${APP_MEDIA_PUBLIC_BASE_URL}
-      APP_LOG_REQUESTS: ${APP_LOG_REQUESTS}
-      GUNICORN_WORKERS: ${GUNICORN_WORKERS}
-      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT}
+    environment: *backend-env
     ports:
       - "8081:8080"
+    volumes:
+      - media_data:/app/media
+    networks:
+      - gikky-network
+      - shared-network
+
+  t0-worker:
+    image: ${BACKEND_IMAGE}
+    container_name: gikky-t0-worker
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    command: ["python", "manage.py", "run_t0_worker"]
+    environment: *backend-env
+    volumes:
+      - media_data:/app/media
+    networks:
+      - gikky-network
+      - shared-network
+
+  t0-foreign-worker:
+    image: ${BACKEND_IMAGE}
+    container_name: gikky-t0-foreign-worker
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    command: ["python", "manage.py", "run_t0_foreign_worker"]
+    environment: *backend-env
+    volumes:
+      - media_data:/app/media
+    networks:
+      - gikky-network
+      - shared-network
+
+  foreign-backfill-worker:
+    image: ${BACKEND_IMAGE}
+    container_name: gikky-foreign-backfill-worker
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    command: ["python", "manage.py", "run_foreign_backfill_worker"]
+    environment: *backend-env
     volumes:
       - media_data:/app/media
     networks:
