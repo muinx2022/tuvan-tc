@@ -29,7 +29,7 @@ services:
       DEPLOY_HOST: 0.0.0.0
       DEPLOY_PORT: 8787
       DEPLOY_WEBHOOK_TOKEN: ${DEPLOY_WEBHOOK_TOKEN}
-      DEPLOY_SCRIPT: /opt/gikky-deploy/deploy.sh
+      DEPLOY_SCRIPT: /workspace/deploy/vps/deploy.sh
       DEPLOY_COMPOSE_DIR: /workspace
       DEPLOY_COMPOSE_FILE: deploy/docker-compose.prod.yml
       DEPLOY_RETRIES: ${DEPLOY_RETRIES:-3}
