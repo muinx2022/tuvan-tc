@@ -145,6 +145,46 @@ export function DashboardPage() {
         Tong quan nhanh ve du lieu va cac khu vuc quan tri.
       </Typography.Text>
 
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={8}>
+          <Card>
+            <Statistic title="Stocks" value={stats.stocks} prefix={<DatabaseOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <Card>
+            <Statistic title="Posts" value={stats.posts} prefix={<FileTextOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <Card>
+            <Statistic title="Categories" value={stats.categories} prefix={<BarChartOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <Card>
+            <Statistic title="Users" value={stats.users} prefix={<TeamOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <Card>
+            <Statistic title="Roles" value={stats.roles} prefix={<SafetyCertificateOutlined />} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card title="Quick Actions">
+        <Space wrap>
+          <Button type="primary" onClick={() => navigate("/sync-data")}>
+            Sync du lieu
+          </Button>
+          <Button onClick={() => navigate("/analytics")}>Mo Analytics</Button>
+          <Button onClick={() => navigate("/stocks")}>Quan ly Stocks</Button>
+          <Button onClick={() => navigate("/posts")}>Quan ly Posts</Button>
+          <Button onClick={() => navigate("/users")}>Quan ly Users</Button>
+        </Space>
+      </Card>
+
       <Card
         title="Worker Health"
         extra={<Button onClick={() => void loadWorkerHealth()} loading={workerLoading}>Lam moi</Button>}
@@ -231,46 +271,6 @@ export function DashboardPage() {
             </Card>
           </Col>
         </Row>
-      </Card>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={8}>
-          <Card>
-            <Statistic title="Stocks" value={stats.stocks} prefix={<DatabaseOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card>
-            <Statistic title="Posts" value={stats.posts} prefix={<FileTextOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card>
-            <Statistic title="Categories" value={stats.categories} prefix={<BarChartOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card>
-            <Statistic title="Users" value={stats.users} prefix={<TeamOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card>
-            <Statistic title="Roles" value={stats.roles} prefix={<SafetyCertificateOutlined />} />
-          </Card>
-        </Col>
-      </Row>
-
-      <Card title="Quick Actions">
-        <Space wrap>
-          <Button type="primary" onClick={() => navigate("/sync-data")}>
-            Sync du lieu
-          </Button>
-          <Button onClick={() => navigate("/analytics")}>Mo Analytics</Button>
-          <Button onClick={() => navigate("/stocks")}>Quan ly Stocks</Button>
-          <Button onClick={() => navigate("/posts")}>Quan ly Posts</Button>
-          <Button onClick={() => navigate("/users")}>Quan ly Users</Button>
-        </Space>
       </Card>
     </Space>
   );
