@@ -11,6 +11,7 @@ from typing import Any
 
 from django.core.paginator import Paginator
 from django.db.models import Count
+from django.db.models.functions import Length
 from django.utils import timezone
 
 from apps.stocks import stock_queries
@@ -330,7 +331,12 @@ def list_symbols(page: int, size: int, ticker: str | None, industry_group_id: in
         raise BadRequestError("Page must be >= 0")
     if size <= 0 or size > 200:
         raise BadRequestError("Size must be between 1 and 200")
-    qs = StockSymbol.objects.select_related("industry_group").order_by("ticker")
+    qs = (
+        StockSymbol.objects.select_related("industry_group")
+        .annotate(ticker_length=Length("ticker"))
+        .filter(ticker_length=3)
+        .order_by("ticker")
+    )
     nt = (ticker or "").strip().upper()
     if nt:
         qs = qs.filter(ticker__icontains=nt)
