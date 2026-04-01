@@ -10,4 +10,5 @@ urlpatterns = [
     path("admin/settings/google-oauth", views.GoogleOauthSettingView.as_view()),
     path("admin/settings/history-sync-schedule", views.HistorySyncScheduleSettingView.as_view()),
     path("admin/settings/t0-snapshot-schedule", views.T0SnapshotScheduleSettingView.as_view()),
+    path("admin/settings/money-flow-features", views.MoneyFlowFeatureSettingView.as_view()),
 ]

@@ -49,6 +49,14 @@ class T0SnapshotScheduleWriteSerializer(serializers.Serializer):
     projectionFinalSlot = serializers.RegexField(required=False, regex=r"^\d{2}:\d{2}$", default="15:00")
 
 
+class MoneyFlowFeatureSettingWriteSerializer(serializers.Serializer):
+    historyBaselineDays = serializers.IntegerField(required=False, min_value=1, default=10)
+    historyMinDaysForStable = serializers.IntegerField(required=False, min_value=1, default=3)
+    historyAllowPartialBaseline = serializers.BooleanField(required=False, default=True)
+    intradaySlotMode = serializers.ChoiceField(required=False, choices=("strict_same_slot",), default="strict_same_slot")
+    lowHistoryConfidenceMode = serializers.ChoiceField(required=False, choices=("flag_only",), default="flag_only")
+
+
 class MediaSettingWriteSerializer(serializers.Serializer):
     provider = serializers.ChoiceField(choices=("local", "cloudinary", "cloudflare_s3"), required=False, default="cloudinary")
     localRootPath = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=500)

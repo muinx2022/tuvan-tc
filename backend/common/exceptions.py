@@ -17,33 +17,36 @@ class ForbiddenError(Exception):
     pass
 
 
+def _coerce_error_message(detail) -> str:
+    if isinstance(detail, dict):
+        if "detail" in detail:
+            return _coerce_error_message(detail["detail"])
+        parts: list[str] = []
+        for _, value in detail.items():
+            if isinstance(value, list):
+                parts.extend(str(item) for item in value)
+            else:
+                parts.append(str(value))
+        return ", ".join(parts) if parts else "Request failed"
+    if isinstance(detail, list):
+        return ", ".join(str(item) for item in detail) if detail else "Request failed"
+    return str(detail)
+
+
 def custom_exception_handler(exc, context):
     response = drf_exception_handler(exc, context)
     if response is not None:
         if response.status_code == status.HTTP_400_BAD_REQUEST:
-            detail = response.data
-            if isinstance(detail, dict):
-                if "detail" in detail:
-                    msg = str(detail["detail"])
-                else:
-                    parts = []
-                    for k, v in detail.items():
-                        if isinstance(v, list):
-                            parts.extend(str(x) for x in v)
-                        else:
-                            parts.append(str(v))
-                    msg = ", ".join(parts) if parts else "Bad request"
-            else:
-                msg = str(detail)
+            msg = _coerce_error_message(response.data) or "Bad request"
             return Response(api_error(msg), status=status.HTTP_400_BAD_REQUEST)
         if response.status_code == status.HTTP_401_UNAUTHORIZED:
             return Response(
-                api_error(getattr(exc, "detail", str(exc)) or "Unauthorized"),
+                api_error(_coerce_error_message(getattr(exc, "detail", response.data)) or "Unauthorized"),
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         if response.status_code == status.HTTP_403_FORBIDDEN:
-            return Response(api_error(str(response.data.get("detail", "Forbidden"))), status=status.HTTP_403_FORBIDDEN)
-        return Response(api_error(str(response.data)), status=response.status_code)
+            return Response(api_error(_coerce_error_message(response.data) or "Forbidden"), status=status.HTTP_403_FORBIDDEN)
+        return Response(api_error(_coerce_error_message(response.data)), status=response.status_code)
 
     if isinstance(exc, NotFoundError):
         return Response(api_error(str(exc)), status=status.HTTP_404_NOT_FOUND)

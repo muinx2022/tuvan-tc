@@ -34,3 +34,4 @@ Thumbs.db
 .idea/
 .vscode/
 .codex-tmp/
+.local-dev/

@@ -84,6 +84,22 @@ type T0SnapshotScheduleFormValues = {
   projectionFinalSlot?: string;
 };
 
+type MoneyFlowFeatureSetting = {
+  historyBaselineDays: number;
+  historyMinDaysForStable: number;
+  historyAllowPartialBaseline: boolean;
+  intradaySlotMode: "strict_same_slot";
+  lowHistoryConfidenceMode: "flag_only";
+};
+
+type MoneyFlowFeatureFormValues = {
+  historyBaselineDays?: number;
+  historyMinDaysForStable?: number;
+  historyAllowPartialBaseline?: boolean;
+  intradaySlotMode?: "strict_same_slot";
+  lowHistoryConfidenceMode?: "flag_only";
+};
+
 const DEFAULT_T0_TIMES = [
   "09:15",
   "09:30",
@@ -462,6 +478,56 @@ function T0SnapshotScheduleTab({
   );
 }
 
+function MoneyFlowFeatureTab({
+  form,
+  loading,
+}: {
+  form: ReturnType<typeof Form.useForm<MoneyFlowFeatureFormValues>>[0];
+  loading: boolean;
+}) {
+  return (
+    <Card loading={loading}>
+      <Typography.Paragraph type="secondary">
+        Cau hinh nay dieu khien so ngay lich su dung de tinh baseline cho Money Flow Derived va Market Strength.
+      </Typography.Paragraph>
+      <Form<MoneyFlowFeatureFormValues> form={form} layout="vertical">
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item label="So ngay baseline" name="historyBaselineDays" rules={[{ required: true, message: "Bat buoc" }]}>
+              <InputNumber min={1} max={250} style={{ width: "100%" }} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item label="So ngay toi thieu on dinh" name="historyMinDaysForStable" rules={[{ required: true, message: "Bat buoc" }]}>
+              <InputNumber min={1} max={250} style={{ width: "100%" }} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item label="Cho phep baseline partial" name="historyAllowPartialBaseline">
+              <Select
+                options={[
+                  { value: true, label: "Co" },
+                  { value: false, label: "Khong" },
+                ]}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item label="Intraday slot mode" name="intradaySlotMode" rules={[{ required: true, message: "Bat buoc" }]}>
+              <Select options={[{ value: "strict_same_slot", label: "Strict same slot" }]} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item label="Low history confidence mode" name="lowHistoryConfidenceMode" rules={[{ required: true, message: "Bat buoc" }]}>
+              <Select options={[{ value: "flag_only", label: "Flag only" }]} />
+            </Form.Item>
+          </Col>
+        </Row>
+      </Form>
+    </Card>
+  );
+}
+
 export function SettingsPage() {
   const [loadingDnse, setLoadingDnse] = useState(false);
   const [loadingMedia, setLoadingMedia] = useState(false);
@@ -469,6 +535,7 @@ export function SettingsPage() {
   const [loadingGoogleOauth, setLoadingGoogleOauth] = useState(false);
   const [loadingHistorySchedule, setLoadingHistorySchedule] = useState(false);
   const [loadingT0Schedule, setLoadingT0Schedule] = useState(false);
+  const [loadingMoneyFlowFeatures, setLoadingMoneyFlowFeatures] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
   const [historyRuntime, setHistoryRuntime] = useState<HistorySyncScheduleSetting["runtime"] | null>(null);
 
@@ -478,6 +545,7 @@ export function SettingsPage() {
   const [googleOauthForm] = Form.useForm<GoogleOauthFormValues>();
   const [historyScheduleForm] = Form.useForm<HistorySyncScheduleFormValues>();
   const [t0ScheduleForm] = Form.useForm<T0SnapshotScheduleFormValues>();
+  const [moneyFlowFeatureForm] = Form.useForm<MoneyFlowFeatureFormValues>();
 
   async function loadDnse() {
     setLoadingDnse(true);
@@ -580,8 +648,24 @@ export function SettingsPage() {
     }
   }
 
+  async function loadMoneyFlowFeatures() {
+    setLoadingMoneyFlowFeatures(true);
+    try {
+      const res = await apiClient.get<ApiEnvelope<MoneyFlowFeatureSetting>>("/admin/settings/money-flow-features");
+      moneyFlowFeatureForm.setFieldsValue({
+        historyBaselineDays: res.data.data.historyBaselineDays ?? 10,
+        historyMinDaysForStable: res.data.data.historyMinDaysForStable ?? 3,
+        historyAllowPartialBaseline: res.data.data.historyAllowPartialBaseline ?? true,
+        intradaySlotMode: res.data.data.intradaySlotMode ?? "strict_same_slot",
+        lowHistoryConfidenceMode: res.data.data.lowHistoryConfidenceMode ?? "flag_only",
+      });
+    } finally {
+      setLoadingMoneyFlowFeatures(false);
+    }
+  }
+
   async function loadAll() {
-    await Promise.all([loadDnse(), loadSsiFc(), loadMedia(), loadGoogleOauth(), loadHistorySchedule(), loadT0Schedule()]);
+    await Promise.all([loadDnse(), loadSsiFc(), loadMedia(), loadGoogleOauth(), loadHistorySchedule(), loadT0Schedule(), loadMoneyFlowFeatures()]);
   }
 
   useEffect(() => {
@@ -591,13 +675,14 @@ export function SettingsPage() {
   async function saveAll() {
     setSavingAll(true);
     try {
-      const [dnseValues, ssiFcValues, mediaValues, googleOauthValues, historyScheduleValues, t0ScheduleValues] = await Promise.all([
+      const [dnseValues, ssiFcValues, mediaValues, googleOauthValues, historyScheduleValues, t0ScheduleValues, moneyFlowFeatureValues] = await Promise.all([
         dnseForm.validateFields(),
         ssiFcForm.validateFields(),
         mediaForm.validateFields(),
         googleOauthForm.validateFields(),
         historyScheduleForm.validateFields(),
         t0ScheduleForm.validateFields(),
+        moneyFlowFeatureForm.validateFields(),
       ]);
 
       await Promise.all([
@@ -633,6 +718,13 @@ export function SettingsPage() {
           projectionWeight5: t0ScheduleValues.projectionWeight5 ?? 0.4,
           projectionFinalSlot: t0ScheduleValues.projectionFinalSlot ?? "15:00",
         }),
+        apiClient.put("/admin/settings/money-flow-features", {
+          historyBaselineDays: moneyFlowFeatureValues.historyBaselineDays ?? 10,
+          historyMinDaysForStable: moneyFlowFeatureValues.historyMinDaysForStable ?? 3,
+          historyAllowPartialBaseline: moneyFlowFeatureValues.historyAllowPartialBaseline ?? true,
+          intradaySlotMode: moneyFlowFeatureValues.intradaySlotMode ?? "strict_same_slot",
+          lowHistoryConfidenceMode: moneyFlowFeatureValues.lowHistoryConfidenceMode ?? "flag_only",
+        }),
       ]);
 
       await loadAll();
@@ -642,7 +734,7 @@ export function SettingsPage() {
   }
 
   const loadingAny =
-    loadingDnse || loadingSsiFc || loadingMedia || loadingGoogleOauth || loadingHistorySchedule || loadingT0Schedule;
+    loadingDnse || loadingSsiFc || loadingMedia || loadingGoogleOauth || loadingHistorySchedule || loadingT0Schedule || loadingMoneyFlowFeatures;
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
@@ -692,6 +784,12 @@ export function SettingsPage() {
             label: "T0 Snapshot Schedule",
             forceRender: true,
             children: <T0SnapshotScheduleTab form={t0ScheduleForm} loading={loadingT0Schedule} />,
+          },
+          {
+            key: "money-flow-features",
+            label: "Money Flow Features",
+            forceRender: true,
+            children: <MoneyFlowFeatureTab form={moneyFlowFeatureForm} loading={loadingMoneyFlowFeatures} />,
           },
         ]}
       />

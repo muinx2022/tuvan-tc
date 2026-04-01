@@ -10,6 +10,7 @@ from apps.settings_app.serializers import (
     GoogleOauthSettingWriteSerializer,
     HistorySyncScheduleWriteSerializer,
     MediaSettingWriteSerializer,
+    MoneyFlowFeatureSettingWriteSerializer,
     SsiFcSettingWriteSerializer,
     T0SnapshotScheduleWriteSerializer,
 )
@@ -99,6 +100,20 @@ class T0SnapshotScheduleSettingView(AdminAPIView):
     def put(self, request):
         data = self.validate_body(T0SnapshotScheduleWriteSerializer)
         return Response(api_ok("T0 snapshot schedule settings saved", sett_services.save_t0_snapshot_schedule(data)))
+
+
+class MoneyFlowFeatureSettingView(AdminAPIView):
+    permission_map = {
+        "GET": ("settings.view",),
+        "PUT": ("settings.update",),
+    }
+
+    def get(self, request):
+        return Response(api_ok("Fetched money flow feature settings", sett_services.get_money_flow_feature_config()))
+
+    def put(self, request):
+        data = self.validate_body(MoneyFlowFeatureSettingWriteSerializer)
+        return Response(api_ok("Money flow feature settings saved", sett_services.save_money_flow_feature_config(data)))
 
 
 class PublicGoogleOauthConfigView(APIView):

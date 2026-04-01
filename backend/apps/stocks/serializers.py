@@ -48,3 +48,29 @@ class ForeignTradingListQuerySerializer(PageQuerySerializer):
 class ForeignTradingTimelineQuerySerializer(PageQuerySerializer):
     tradingDateFrom = serializers.DateField(required=False, allow_null=True)
     tradingDateTo = serializers.DateField(required=False, allow_null=True)
+
+
+class MoneyFlowFeatureListQuerySerializer(PageQuerySerializer):
+    entityType = serializers.ChoiceField(required=False, allow_null=True, choices=("stock", "sector", "market"))
+    entityId = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    tradingDate = serializers.DateField(required=False, allow_null=True)
+    windowType = serializers.ChoiceField(required=False, allow_null=True, choices=("slot", "eod"))
+    snapshotSlot = serializers.RegexField(required=False, allow_null=True, regex=r"^\d{2}:\d{2}$")
+
+
+class MoneyFlowFeatureRebuildSerializer(serializers.Serializer):
+    tradingDate = serializers.DateField(required=False, allow_null=True)
+    snapshotSlot = serializers.RegexField(required=False, allow_null=True, regex=r"^\d{2}:\d{2}$")
+    includeEod = serializers.BooleanField(required=False, default=True)
+
+
+class MoneyFlowFeatureBackfillEodSerializer(serializers.Serializer):
+    tradingDateFrom = serializers.DateField(required=False, allow_null=True)
+    tradingDateTo = serializers.DateField(required=False, allow_null=True)
+
+    def validate(self, attrs):
+        trading_date_from = attrs.get("tradingDateFrom")
+        trading_date_to = attrs.get("tradingDateTo")
+        if trading_date_from and trading_date_to and trading_date_from > trading_date_to:
+            raise serializers.ValidationError("tradingDateFrom must be <= tradingDateTo")
+        return attrs

@@ -22,6 +22,7 @@ APP_SETTING_T0_FOREIGN_WORKER_LOCK = "t0_foreign_worker_lock"
 APP_SETTING_SSI_FC = "ssi_fc"
 APP_SETTING_FOREIGN_BACKFILL_RUNTIME = "foreign_backfill_runtime"
 APP_SETTING_FOREIGN_BACKFILL_LOCK = "foreign_backfill_lock"
+APP_SETTING_MONEY_FLOW_FEATURES = "money_flow_features"
 DEFAULT_T0_SNAPSHOT_TIMES = [
     "09:15",
     "09:30",
@@ -600,6 +601,60 @@ def get_t0_foreign_worker_lock() -> dict:
 def save_t0_foreign_worker_lock(data: dict) -> dict:
     _save_app_setting_json(APP_SETTING_T0_FOREIGN_WORKER_LOCK, data)
     return get_t0_foreign_worker_lock()
+
+
+def get_money_flow_feature_config() -> dict:
+    data = _get_app_setting_json(
+        APP_SETTING_MONEY_FLOW_FEATURES,
+        default={
+            "historyBaselineDays": 10,
+            "historyMinDaysForStable": 3,
+            "historyAllowPartialBaseline": True,
+            "intradaySlotMode": "strict_same_slot",
+            "lowHistoryConfidenceMode": "flag_only",
+        },
+    )
+    baseline_days = _normalize_positive_int(data.get("historyBaselineDays", 10), 10, "historyBaselineDays")
+    min_days = _normalize_positive_int(data.get("historyMinDaysForStable", 3), 3, "historyMinDaysForStable")
+    if min_days > baseline_days:
+        min_days = baseline_days
+    intraday_slot_mode = str(data.get("intradaySlotMode") or "strict_same_slot").strip() or "strict_same_slot"
+    if intraday_slot_mode != "strict_same_slot":
+        intraday_slot_mode = "strict_same_slot"
+    low_history_confidence_mode = str(data.get("lowHistoryConfidenceMode") or "flag_only").strip() or "flag_only"
+    if low_history_confidence_mode != "flag_only":
+        low_history_confidence_mode = "flag_only"
+    return {
+        "historyBaselineDays": baseline_days,
+        "historyMinDaysForStable": min_days,
+        "historyAllowPartialBaseline": bool(data.get("historyAllowPartialBaseline", True)),
+        "intradaySlotMode": intraday_slot_mode,
+        "lowHistoryConfidenceMode": low_history_confidence_mode,
+    }
+
+
+@transaction.atomic
+def save_money_flow_feature_config(data: dict) -> dict:
+    current = get_money_flow_feature_config()
+    baseline_days = _normalize_positive_int(data.get("historyBaselineDays", current.get("historyBaselineDays", 10)), 10, "historyBaselineDays")
+    min_days = _normalize_positive_int(data.get("historyMinDaysForStable", current.get("historyMinDaysForStable", 3)), 3, "historyMinDaysForStable")
+    if min_days > baseline_days:
+        raise BadRequestError("historyMinDaysForStable must be <= historyBaselineDays")
+    intraday_slot_mode = str(data.get("intradaySlotMode", current.get("intradaySlotMode", "strict_same_slot")) or "strict_same_slot").strip()
+    if intraday_slot_mode != "strict_same_slot":
+        raise BadRequestError("intradaySlotMode must be strict_same_slot")
+    low_history_confidence_mode = str(data.get("lowHistoryConfidenceMode", current.get("lowHistoryConfidenceMode", "flag_only")) or "flag_only").strip()
+    if low_history_confidence_mode != "flag_only":
+        raise BadRequestError("lowHistoryConfidenceMode must be flag_only")
+    payload = {
+        "historyBaselineDays": baseline_days,
+        "historyMinDaysForStable": min_days,
+        "historyAllowPartialBaseline": bool(data.get("historyAllowPartialBaseline", current.get("historyAllowPartialBaseline", True))),
+        "intradaySlotMode": intraday_slot_mode,
+        "lowHistoryConfidenceMode": low_history_confidence_mode,
+    }
+    _save_app_setting_json(APP_SETTING_MONEY_FLOW_FEATURES, payload)
+    return get_money_flow_feature_config()
 
 
 def get_foreign_backfill_runtime() -> dict:

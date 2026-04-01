@@ -25,6 +25,7 @@ from django.utils import timezone
 
 from apps.settings_app.models import AppSetting
 from apps.settings_app import services as setting_services
+from apps.stocks import money_flow_service as money_flow_services
 from apps.stocks.models import StockSymbol, StockT0ForeignState, StockT0RealtimeState, StockT0Snapshot
 from common.exceptions import BadRequestError
 
@@ -36,6 +37,8 @@ T0_LOCK_TTL_SECONDS = 90
 T0_SNAPSHOT_GRACE_SECONDS = 120
 T0_PROACTIVE_RECONNECT_SECONDS = (7 * 60 * 60) + (45 * 60)
 DNSE_WS_URL = "wss://ws-openapi.dnse.com.vn"
+DNSE_SIDE_BUY = 1
+DNSE_SIDE_SELL = 2
 T0_TRADING_SESSIONS = [
     (dt_time(hour=9, minute=15), dt_time(hour=11, minute=30)),
     (dt_time(hour=13, minute=0), dt_time(hour=15, minute=0)),
@@ -57,6 +60,10 @@ def _ensure_t0_tables() -> None:
             last_message_at TIMESTAMPTZ NOT NULL,
             total_match_vol BIGINT NULL,
             total_match_val NUMERIC(24,4) NULL,
+            active_buy_vol BIGINT NULL,
+            active_sell_vol BIGINT NULL,
+            active_buy_val NUMERIC(24,4) NULL,
+            active_sell_val NUMERIC(24,4) NULL,
             raw_payload TEXT NULL,
             created_at TIMESTAMPTZ NOT NULL,
             updated_at TIMESTAMPTZ NOT NULL
@@ -88,6 +95,10 @@ def _ensure_t0_tables() -> None:
             snapshot_at TIMESTAMPTZ NOT NULL,
             total_match_vol BIGINT NULL,
             total_match_val NUMERIC(24,4) NULL,
+            active_buy_vol BIGINT NULL,
+            active_sell_vol BIGINT NULL,
+            active_buy_val NUMERIC(24,4) NULL,
+            active_sell_val NUMERIC(24,4) NULL,
             raw_payload TEXT NULL,
             created_at TIMESTAMPTZ NOT NULL,
             updated_at TIMESTAMPTZ NOT NULL,
@@ -103,6 +114,10 @@ def _ensure_t0_tables() -> None:
             last_message_at DATETIME NOT NULL,
             total_match_vol BIGINT NULL,
             total_match_val NUMERIC(24,4) NULL,
+            active_buy_vol BIGINT NULL,
+            active_sell_vol BIGINT NULL,
+            active_buy_val NUMERIC(24,4) NULL,
+            active_sell_val NUMERIC(24,4) NULL,
             raw_payload TEXT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
@@ -134,6 +149,10 @@ def _ensure_t0_tables() -> None:
             snapshot_at DATETIME NOT NULL,
             total_match_vol BIGINT NULL,
             total_match_val NUMERIC(24,4) NULL,
+            active_buy_vol BIGINT NULL,
+            active_sell_vol BIGINT NULL,
+            active_buy_val NUMERIC(24,4) NULL,
+            active_sell_val NUMERIC(24,4) NULL,
             raw_payload TEXT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL,
@@ -144,21 +163,26 @@ def _ensure_t0_tables() -> None:
         cursor.execute(realtime_sql)
         cursor.execute(foreign_sql)
         cursor.execute(snapshot_sql)
-        existing_columns: set[str] = set()
-        if vendor == "postgresql":
-            cursor.execute(
-                """
-                SELECT column_name
-                FROM information_schema.columns
-                WHERE table_name = 'stock_t0_snapshots'
-                """
-            )
-            existing_columns = {row[0] for row in cursor.fetchall()}
-        else:
-            cursor.execute("PRAGMA table_info(stock_t0_snapshots)")
-            existing_columns = {row[1] for row in cursor.fetchall()}
+        def existing_table_columns(table_name: str) -> set[str]:
+            if vendor == "postgresql":
+                cursor.execute(
+                    """
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = %s
+                    """,
+                    [table_name],
+                )
+                return {row[0] for row in cursor.fetchall()}
+            cursor.execute(f"PRAGMA table_info({table_name})")
+            return {row[1] for row in cursor.fetchall()}
 
-        alter_statements = {
+        snapshot_columns = existing_table_columns("stock_t0_snapshots")
+        snapshot_alter_statements = {
+            "active_buy_vol": "ALTER TABLE stock_t0_snapshots ADD COLUMN active_buy_vol BIGINT NULL",
+            "active_sell_vol": "ALTER TABLE stock_t0_snapshots ADD COLUMN active_sell_vol BIGINT NULL",
+            "active_buy_val": "ALTER TABLE stock_t0_snapshots ADD COLUMN active_buy_val NUMERIC(24,4) NULL",
+            "active_sell_val": "ALTER TABLE stock_t0_snapshots ADD COLUMN active_sell_val NUMERIC(24,4) NULL",
             "foreign_buy_vol_total": "ALTER TABLE stock_t0_snapshots ADD COLUMN foreign_buy_vol_total BIGINT NULL",
             "foreign_sell_vol_total": "ALTER TABLE stock_t0_snapshots ADD COLUMN foreign_sell_vol_total BIGINT NULL",
             "foreign_buy_val_total": "ALTER TABLE stock_t0_snapshots ADD COLUMN foreign_buy_val_total NUMERIC(24,4) NULL",
@@ -167,8 +191,19 @@ def _ensure_t0_tables() -> None:
             "net_foreign_val": "ALTER TABLE stock_t0_snapshots ADD COLUMN net_foreign_val NUMERIC(24,4) NULL",
             "foreign_data_source": "ALTER TABLE stock_t0_snapshots ADD COLUMN foreign_data_source VARCHAR(30) NULL",
         }
-        for column_name, sql in alter_statements.items():
-            if column_name not in existing_columns:
+        for column_name, sql in snapshot_alter_statements.items():
+            if column_name not in snapshot_columns:
+                cursor.execute(sql)
+
+        realtime_columns = existing_table_columns("stock_t0_realtime_state")
+        realtime_alter_statements = {
+            "active_buy_vol": "ALTER TABLE stock_t0_realtime_state ADD COLUMN active_buy_vol BIGINT NULL",
+            "active_sell_vol": "ALTER TABLE stock_t0_realtime_state ADD COLUMN active_sell_vol BIGINT NULL",
+            "active_buy_val": "ALTER TABLE stock_t0_realtime_state ADD COLUMN active_buy_val NUMERIC(24,4) NULL",
+            "active_sell_val": "ALTER TABLE stock_t0_realtime_state ADD COLUMN active_sell_val NUMERIC(24,4) NULL",
+        }
+        for column_name, sql in realtime_alter_statements.items():
+            if column_name not in realtime_columns:
                 cursor.execute(sql)
 
 
@@ -196,6 +231,8 @@ def list_valid_t0_tickers() -> list[str]:
 
 
 def _serialize_snapshot(entity: StockT0Snapshot) -> dict:
+    active_buy_val = _coerce_decimal(entity.active_buy_val)
+    active_sell_val = _coerce_decimal(entity.active_sell_val)
     return {
         "id": entity.id,
         "ticker": entity.ticker,
@@ -204,6 +241,12 @@ def _serialize_snapshot(entity: StockT0Snapshot) -> dict:
         "snapshotAt": entity.snapshot_at.isoformat() if entity.snapshot_at else None,
         "totalMatchVol": int(entity.total_match_vol or 0),
         "totalMatchVal": entity.total_match_val,
+        "activeBuyVol": int(entity.active_buy_vol or 0),
+        "activeSellVol": int(entity.active_sell_vol or 0),
+        "activeNetVol": int(entity.active_buy_vol or 0) - int(entity.active_sell_vol or 0),
+        "activeBuyVal": active_buy_val,
+        "activeSellVal": active_sell_val,
+        "activeNetVal": active_buy_val - active_sell_val,
         "foreignBuyVolTotal": int(entity.foreign_buy_vol_total or 0),
         "foreignSellVolTotal": int(entity.foreign_sell_vol_total or 0),
         "foreignBuyValTotal": entity.foreign_buy_val_total,
@@ -218,12 +261,20 @@ def _serialize_snapshot(entity: StockT0Snapshot) -> dict:
 
 
 def _serialize_realtime(entity: StockT0RealtimeState) -> dict:
+    active_buy_val = _coerce_decimal(entity.active_buy_val)
+    active_sell_val = _coerce_decimal(entity.active_sell_val)
     return {
         "ticker": entity.ticker,
         "tradingDate": entity.trading_date.isoformat(),
         "lastMessageAt": entity.last_message_at.isoformat() if entity.last_message_at else None,
         "totalMatchVol": int(entity.total_match_vol or 0),
         "totalMatchVal": entity.total_match_val,
+        "activeBuyVol": int(entity.active_buy_vol or 0),
+        "activeSellVol": int(entity.active_sell_vol or 0),
+        "activeNetVol": int(entity.active_buy_vol or 0) - int(entity.active_sell_vol or 0),
+        "activeBuyVal": active_buy_val,
+        "activeSellVal": active_sell_val,
+        "activeNetVal": active_buy_val - active_sell_val,
         "rawPayload": entity.raw_payload,
     }
 
@@ -275,13 +326,46 @@ def _extract_trade_totals(payload: dict[str, Any]) -> tuple[int, Decimal]:
     if total_match_vol in (None, ""):
         total_match_vol = payload.get("total_volume_traded")
     if total_match_vol in (None, ""):
+        total_match_vol = payload.get("totalVolumeTraded")
+    if total_match_vol in (None, ""):
         total_match_vol = payload.get("TotalVolumeTraded")
     total_match_val = payload.get("gta")
     if total_match_val in (None, ""):
         total_match_val = payload.get("gross_trade_amount")
     if total_match_val in (None, ""):
+        total_match_val = payload.get("grossTradeAmount")
+    if total_match_val in (None, ""):
         total_match_val = payload.get("GrossTradeAmount")
     return int(total_match_vol or 0), _coerce_decimal(total_match_val)
+
+
+def _extract_trade_extra_metrics(payload: dict[str, Any]) -> dict[str, Any]:
+    quantity_raw = payload.get("q")
+    if quantity_raw in (None, ""):
+        quantity_raw = payload.get("match_qtty")
+    if quantity_raw in (None, ""):
+        quantity_raw = payload.get("quantity")
+    price_raw = payload.get("p")
+    if price_raw in (None, ""):
+        price_raw = payload.get("match_price")
+    if price_raw in (None, ""):
+        price_raw = payload.get("price")
+    side_raw = payload.get("sd")
+    if side_raw in (None, ""):
+        side_raw = payload.get("side")
+
+    quantity_decimal = _coerce_decimal(quantity_raw)
+    price_decimal = _coerce_decimal(price_raw)
+    trade_value = (quantity_decimal * price_decimal) / Decimal("10000")
+    try:
+        side = int(side_raw) if side_raw not in (None, "") else 0
+    except (TypeError, ValueError):
+        side = 0
+    return {
+        "side": side,
+        "quantity": int(quantity_decimal or 0),
+        "value": trade_value,
+    }
 
 
 def _slot_index(slot: str | None) -> int:
@@ -540,17 +624,36 @@ def upsert_realtime_state(ticker: str, payload: dict[str, Any], trading_date: da
     if not _valid_ticker(normalized_ticker):
         raise BadRequestError("Ticker is invalid for T0 realtime state")
     total_match_vol, total_match_val = _extract_trade_totals(payload)
+    trade_extra = _extract_trade_extra_metrics(payload)
     now = timezone.now()
+    resolved_trading_date = trading_date or _today_vn()
+    entity = StockT0RealtimeState.objects.filter(ticker=normalized_ticker).first()
+    active_buy_vol = int(entity.active_buy_vol or 0) if entity and entity.trading_date == resolved_trading_date else 0
+    active_sell_vol = int(entity.active_sell_vol or 0) if entity and entity.trading_date == resolved_trading_date else 0
+    active_buy_val = _coerce_decimal(entity.active_buy_val) if entity and entity.trading_date == resolved_trading_date else Decimal("0")
+    active_sell_val = _coerce_decimal(entity.active_sell_val) if entity and entity.trading_date == resolved_trading_date else Decimal("0")
+
+    if trade_extra["side"] == DNSE_SIDE_BUY:
+        active_buy_vol += trade_extra["quantity"]
+        active_buy_val += trade_extra["value"]
+    elif trade_extra["side"] == DNSE_SIDE_SELL:
+        active_sell_vol += trade_extra["quantity"]
+        active_sell_val += trade_extra["value"]
+
     entity, _ = StockT0RealtimeState.objects.update_or_create(
         ticker=normalized_ticker,
         defaults={
-            "trading_date": trading_date or _today_vn(),
+            "trading_date": resolved_trading_date,
             "last_message_at": now,
             "total_match_vol": total_match_vol,
             "total_match_val": total_match_val,
+            "active_buy_vol": active_buy_vol,
+            "active_sell_vol": active_sell_vol,
+            "active_buy_val": active_buy_val,
+            "active_sell_val": active_sell_val,
             "raw_payload": json.dumps(payload, ensure_ascii=False),
             "updated_at": now,
-            "created_at": now,
+            "created_at": entity.created_at if entity else now,
         },
     )
     return _serialize_realtime(entity)
@@ -626,6 +729,10 @@ def snapshot_due_realtime_states(
                 "snapshot_at": now,
                 "total_match_vol": state.total_match_vol,
                 "total_match_val": state.total_match_val,
+                "active_buy_vol": state.active_buy_vol,
+                "active_sell_vol": state.active_sell_vol,
+                "active_buy_val": state.active_buy_val,
+                "active_sell_val": state.active_sell_val,
                 "foreign_buy_vol_total": foreign_payload.get("foreignBuyVolTotal"),
                 "foreign_sell_vol_total": foreign_payload.get("foreignSellVolTotal"),
                 "foreign_buy_val_total": foreign_payload.get("foreignBuyValTotal"),
@@ -646,6 +753,11 @@ def snapshot_due_realtime_states(
             "lastSnapshotCount": count,
         }
     )
+    try:
+        money_flow_services.rebuild_money_flow_slot_features(snapshot_slot, today)
+        money_flow_services.capture_money_flow_daily_close(today)
+    except Exception:
+        logger.exception("Money flow rebuild failed for snapshot %s on %s", snapshot_slot, today.isoformat())
     return {
         "snapshotSlot": snapshot_slot,
         "snapshotAt": now.isoformat(),
@@ -715,6 +827,12 @@ def list_t0_snapshot_groups(page: int, size: int, ticker: str | None, trading_da
                 "latestSnapshotAt": latest.snapshot_at.isoformat() if latest and latest.snapshot_at else None,
                 "latestTotalMatchVol": int(latest.total_match_vol or 0) if latest else 0,
                 "latestTotalMatchVal": latest.total_match_val if latest else None,
+                "latestActiveBuyVol": int(latest.active_buy_vol or 0) if latest else 0,
+                "latestActiveSellVol": int(latest.active_sell_vol or 0) if latest else 0,
+                "latestActiveNetVol": (int(latest.active_buy_vol or 0) - int(latest.active_sell_vol or 0)) if latest else 0,
+                "latestActiveBuyVal": _coerce_decimal(latest.active_buy_val) if latest else Decimal("0"),
+                "latestActiveSellVal": _coerce_decimal(latest.active_sell_val) if latest else Decimal("0"),
+                "latestActiveNetVal": (_coerce_decimal(latest.active_buy_val) - _coerce_decimal(latest.active_sell_val)) if latest else Decimal("0"),
                 "latestForeignNetVol": int(latest.net_foreign_vol or 0) if latest else 0,
                 "latestForeignNetVal": latest.net_foreign_val if latest else None,
                 "hasRawPayload": bool((latest.raw_payload or "").strip()) if latest else False,
@@ -758,6 +876,12 @@ def list_t0_realtime_groups(page: int, size: int, ticker: str | None, trading_da
                 "latestSnapshotAt": row.last_message_at.isoformat() if row.last_message_at else None,
                 "latestTotalMatchVol": int(row.total_match_vol or 0),
                 "latestTotalMatchVal": row.total_match_val,
+                "latestActiveBuyVol": int(row.active_buy_vol or 0),
+                "latestActiveSellVol": int(row.active_sell_vol or 0),
+                "latestActiveNetVol": int(row.active_buy_vol or 0) - int(row.active_sell_vol or 0),
+                "latestActiveBuyVal": _coerce_decimal(row.active_buy_val),
+                "latestActiveSellVal": _coerce_decimal(row.active_sell_val),
+                "latestActiveNetVal": _coerce_decimal(row.active_buy_val) - _coerce_decimal(row.active_sell_val),
                 "latestForeignNetVol": int(foreign.get("netForeignVol") or 0),
                 "latestForeignNetVal": foreign.get("netForeignVal"),
                 "hasRawPayload": bool((row.raw_payload or "").strip()),
@@ -882,7 +1006,7 @@ def _subscribe_message(tickers: list[str]) -> bytes:
             "action": "subscribe",
             "channels": [
                 {
-                    "name": "tick.G1.msgpack",
+                    "name": "tick_extra.G1.msgpack",
                     "symbols": tickers,
                 }
             ],
@@ -1116,7 +1240,7 @@ class DnseT0Worker:
             return
         if action == "error":
             raise BadRequestError(data.get("message") or data.get("msg") or "DNSE websocket error")
-        if data.get("T") not in ("t", "te"):
+        if data.get("T") != "te":
             return
         ticker = str(data.get("s") or data.get("symbol") or data.get("Symbol") or "").strip().upper()
         if not _valid_ticker(ticker):

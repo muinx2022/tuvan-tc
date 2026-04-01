@@ -37,6 +37,12 @@ type T0SnapshotRow = {
   snapshotAt: string | null;
   totalMatchVol: number;
   totalMatchVal: number | string | null;
+  activeBuyVol?: number;
+  activeSellVol?: number;
+  activeNetVol?: number;
+  activeBuyVal?: number | string | null;
+  activeSellVal?: number | string | null;
+  activeNetVal?: number | string | null;
   foreignBuyVolTotal?: number;
   foreignSellVolTotal?: number;
   foreignBuyValTotal?: number | string | null;
@@ -95,6 +101,12 @@ type CompactSnapshotRow = {
   latestSnapshotAt: string | null;
   latestTotalMatchVol: number;
   latestTotalMatchVal: number | string | null;
+  latestActiveBuyVol?: number;
+  latestActiveSellVol?: number;
+  latestActiveNetVol?: number;
+  latestActiveBuyVal?: number | string | null;
+  latestActiveSellVal?: number | string | null;
+  latestActiveNetVal?: number | string | null;
   latestForeignNetVol?: number;
   latestForeignNetVal?: number | string | null;
   projection: T0Projection;
@@ -116,6 +128,20 @@ function formatNumber(value: number | string | null | undefined) {
     return "-";
   }
   return Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(num);
+}
+
+function renderCompactTriplet(
+  buy: number | string | null | undefined,
+  sell: number | string | null | undefined,
+  net: number | string | null | undefined,
+) {
+  return (
+    <Space direction="vertical" size={0} style={{ lineHeight: 1.2 }}>
+      <Typography.Text>M: {formatNumber(buy)}</Typography.Text>
+      <Typography.Text>B: {formatNumber(sell)}</Typography.Text>
+      <Typography.Text strong>N: {formatNumber(net)}</Typography.Text>
+    </Space>
+  );
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -409,6 +435,18 @@ export function T0DataPage() {
         render: (_: unknown, row: CompactSnapshotRow) => formatNumber(row.latestTotalMatchVal),
       },
       {
+        title: "CD vol",
+        width: 150,
+        render: (_: unknown, row: CompactSnapshotRow) =>
+          renderCompactTriplet(row.latestActiveBuyVol, row.latestActiveSellVol, row.latestActiveNetVol),
+      },
+      {
+        title: "CD val",
+        width: 160,
+        render: (_: unknown, row: CompactSnapshotRow) =>
+          renderCompactTriplet(row.latestActiveBuyVal, row.latestActiveSellVal, row.latestActiveNetVal),
+      },
+      {
         title: "NN net vol",
         align: "right",
         width: 120,
@@ -535,6 +573,12 @@ export function T0DataPage() {
                         snapshotAt: null,
                         totalMatchVol: 0,
                         totalMatchVal: 0,
+                        activeBuyVol: 0,
+                        activeSellVol: 0,
+                        activeNetVol: 0,
+                        activeBuyVal: 0,
+                        activeSellVal: 0,
+                        activeNetVal: 0,
                         foreignBuyVolTotal: 0,
                         foreignSellVolTotal: 0,
                         foreignBuyValTotal: 0,
@@ -549,7 +593,7 @@ export function T0DataPage() {
                   }
                 : {}
             }
-            scroll={{ x: 1100 }}
+            scroll={{ x: 1500 }}
             pagination={{
               current: pagination.current,
               pageSize: pagination.pageSize,
@@ -617,6 +661,16 @@ export function T0DataPage() {
                 { title: "Snapshot At", dataIndex: "snapshotAt", width: 180, render: (value) => formatDateTime(value) },
                 { title: "Vol luy ke", dataIndex: "totalMatchVol", align: "right", render: (value) => formatNumber(value) },
                 { title: "Gia tri luy ke", dataIndex: "totalMatchVal", align: "right", render: (value) => formatNumber(value) },
+                {
+                  title: "CD vol",
+                  width: 150,
+                  render: (_, row) => renderCompactTriplet(row.activeBuyVol, row.activeSellVol, row.activeNetVol),
+                },
+                {
+                  title: "CD val",
+                  width: 160,
+                  render: (_, row) => renderCompactTriplet(row.activeBuyVal, row.activeSellVal, row.activeNetVal),
+                },
                 { title: "NN mua vol", dataIndex: "foreignBuyVolTotal", align: "right", render: (value) => formatNumber(value) },
                 { title: "NN ban vol", dataIndex: "foreignSellVolTotal", align: "right", render: (value) => formatNumber(value) },
                 { title: "NN net vol", dataIndex: "netForeignVol", align: "right", render: (value) => formatNumber(value) },

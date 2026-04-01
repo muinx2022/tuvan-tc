@@ -1,7 +1,7 @@
 import type { AuthProvider } from "@refinedev/core";
 import { apiClient, ensureFreshSession } from "../lib/api";
 import type { ApiEnvelope } from "../lib/api";
-import { clearAuthSession, getAccessToken, getRefreshToken, getStoredUser, setAuthSession } from "../lib/auth-storage";
+import { clearAuthSession, getStoredUser, setAuthSession } from "../lib/auth-storage";
 
 type AuthResponse = {
   accessToken: string;
@@ -65,10 +65,8 @@ export const authProvider: AuthProvider = {
     return { error };
   },
   check: async () => {
-    await ensureFreshSession(true);
-    const token = getAccessToken();
-    const refreshToken = getRefreshToken();
-    if (token || refreshToken) {
+    const token = await ensureFreshSession(true);
+    if (token) {
       return { authenticated: true };
     }
     return {

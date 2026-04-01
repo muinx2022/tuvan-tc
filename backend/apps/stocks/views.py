@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from django.utils import timezone
 from rest_framework.response import Response
 
 from apps.stocks import serializers as stock_serializers
+from apps.stocks import money_flow_service as mfs
 from apps.stocks import stock_symbol_service as ss
 from apps.stocks import t0_snapshot_service as t0s
 from common.admin_api import AdminOnlyAPIView
@@ -144,6 +146,76 @@ class StockT0TickerTimelineView(AdminOnlyAPIView):
             api_ok(
                 "Fetched T0 ticker timeline successfully",
                 t0s.get_t0_ticker_timeline(ticker, query.get("tradingDate")),
+            )
+        )
+
+
+class StockT0SnapshotSlotsView(AdminOnlyAPIView):
+    def get(self, request):
+        query = self.validate_query(stock_serializers.T0SnapshotTimelineQuerySerializer, partial=True)
+        trading_date = query.get("tradingDate") or timezone.now().date()
+        slots = sorted(t0s.get_existing_snapshot_slots(trading_date))
+        return Response(api_ok("Fetched T0 snapshot slots successfully", {"tradingDate": trading_date.isoformat(), "slots": slots}))
+
+
+class StockMoneyFlowFeatureListView(AdminOnlyAPIView):
+    def get(self, request):
+        query = self.validate_query(stock_serializers.MoneyFlowFeatureListQuerySerializer, partial=True)
+        return Response(
+            api_ok(
+                "Fetched money flow features successfully",
+                mfs.list_money_flow_features(
+                    query.get("page", 0),
+                    query.get("size", 20),
+                    query.get("entityType"),
+                    query.get("tradingDate"),
+                    query.get("windowType"),
+                    query.get("snapshotSlot"),
+                    query.get("entityId"),
+                ),
+            )
+        )
+
+
+class StockMoneyFlowFeatureRebuildView(AdminOnlyAPIView):
+    def post(self, request):
+        data = self.validate_body(stock_serializers.MoneyFlowFeatureRebuildSerializer, partial=True)
+        return Response(
+            api_ok(
+                "Rebuilt money flow features successfully",
+                mfs.rebuild_money_flow_features(
+                    data.get("tradingDate") or timezone.now().date(),
+                    data.get("snapshotSlot"),
+                    data.get("includeEod", True),
+                ),
+            )
+        )
+
+
+class StockMoneyFlowFeatureBackfillEodView(AdminOnlyAPIView):
+    def post(self, request):
+        data = self.validate_body(stock_serializers.MoneyFlowFeatureBackfillEodSerializer, partial=True)
+        return Response(
+            api_ok(
+                "Backfilled money flow EOD successfully",
+                mfs.backfill_money_flow_eod(
+                    data.get("tradingDateFrom"),
+                    data.get("tradingDateTo"),
+                ),
+            )
+        )
+
+
+class StockMoneyFlowFeatureBackfillSlotView(AdminOnlyAPIView):
+    def post(self, request):
+        data = self.validate_body(stock_serializers.MoneyFlowFeatureBackfillEodSerializer, partial=True)
+        return Response(
+            api_ok(
+                "Backfilled money flow slot successfully",
+                mfs.backfill_money_flow_slot(
+                    data.get("tradingDateFrom"),
+                    data.get("tradingDateTo"),
+                ),
             )
         )
 

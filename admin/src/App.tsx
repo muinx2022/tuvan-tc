@@ -47,6 +47,7 @@ import { StockFinanceChartsPage } from "./pages/stock-finance-charts";
 import { StockFinanceChartDetailPage } from "./pages/stock-finance-chart-detail";
 import { T0DataPage } from "./pages/t0-data";
 import { ForeignTradingPage } from "./pages/foreign-trading";
+import { MoneyFlowFeaturesPage } from "./pages/money-flow-features";
 
 const THEME_STORAGE_KEY = "admin_theme_mode";
 
@@ -75,6 +76,7 @@ function AdminMenu({ onNavigate }: { onNavigate?: () => void }) {
         { key: "/stocks", icon: <StockOutlined />, label: <Link to="/stocks">Stocks</Link> },
         { key: "/foreign-trading", icon: <LineChartOutlined />, label: <Link to="/foreign-trading">GD nuoc ngoai</Link> },
         { key: "/t0-data", icon: <LineChartOutlined />, label: <Link to="/t0-data">Du lieu T0</Link> },
+        { key: "/money-flow-features", icon: <LineChartOutlined />, label: <Link to="/money-flow-features">Money Flow</Link> },
         { key: "/stock-finance-charts", icon: <LineChartOutlined />, label: <Link to="/stock-finance-charts">Finance Charts</Link> },
         { key: "/sync-data", icon: <SyncOutlined />, label: <Link to="/sync-data">Sync du lieu</Link> },
         { key: "/analytics", icon: <BarChartOutlined />, label: <Link to="/analytics">Tong hop so lieu</Link> },
@@ -101,6 +103,7 @@ function AdminMenu({ onNavigate }: { onNavigate?: () => void }) {
     "/stocks",
     "/foreign-trading",
     "/t0-data",
+    "/money-flow-features",
     "/stock-finance-charts",
     "/users",
     "/roles",
@@ -133,6 +136,7 @@ function ProtectedLayout({ isDark, onToggleTheme }: { isDark: boolean; onToggleT
     "/stocks": "Stock Symbols",
     "/foreign-trading": "Foreign Trading",
     "/t0-data": "T0 Data",
+    "/money-flow-features": "Money Flow Features",
     "/stock-finance-charts": "Vietstock Finance Charts",
     "/sync-data": "Data Synchronization",
     "/analytics": "Analytics",
@@ -286,6 +290,7 @@ function App() {
             { name: "stocks", list: "/stocks" },
             { name: "foreign-trading", list: "/foreign-trading" },
             { name: "t0-data", list: "/t0-data" },
+            { name: "money-flow-features", list: "/money-flow-features" },
             { name: "stock-finance-charts", list: "/stock-finance-charts" },
             { name: "users", list: "/users" },
             { name: "roles", list: "/roles" },
@@ -310,6 +315,7 @@ function App() {
               <Route path="/stocks" element={<StocksPage />} />
               <Route path="/foreign-trading" element={<ForeignTradingPage />} />
               <Route path="/t0-data" element={<T0DataPage />} />
+              <Route path="/money-flow-features" element={<MoneyFlowFeaturesPage />} />
               <Route path="/stock-finance-charts" element={<StockFinanceChartsPage />} />
               <Route path="/stock-finance-charts/:ticker" element={<StockFinanceChartDetailPage />} />
               <Route path="/users" element={<UsersPage />} />

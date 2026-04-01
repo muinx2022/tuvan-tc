@@ -67,6 +67,10 @@ class StockT0RealtimeState(models.Model):
     last_message_at = models.DateTimeField(db_column="last_message_at")
     total_match_vol = models.BigIntegerField(null=True, blank=True, db_column="total_match_vol")
     total_match_val = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="total_match_val")
+    active_buy_vol = models.BigIntegerField(null=True, blank=True, db_column="active_buy_vol")
+    active_sell_vol = models.BigIntegerField(null=True, blank=True, db_column="active_sell_vol")
+    active_buy_val = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="active_buy_val")
+    active_sell_val = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="active_sell_val")
     raw_payload = models.TextField(null=True, blank=True, db_column="raw_payload")
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
@@ -103,6 +107,10 @@ class StockT0Snapshot(models.Model):
     snapshot_at = models.DateTimeField(db_column="snapshot_at")
     total_match_vol = models.BigIntegerField(null=True, blank=True, db_column="total_match_vol")
     total_match_val = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="total_match_val")
+    active_buy_vol = models.BigIntegerField(null=True, blank=True, db_column="active_buy_vol")
+    active_sell_vol = models.BigIntegerField(null=True, blank=True, db_column="active_sell_vol")
+    active_buy_val = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="active_buy_val")
+    active_sell_val = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="active_sell_val")
     foreign_buy_vol_total = models.BigIntegerField(null=True, blank=True, db_column="foreign_buy_vol_total")
     foreign_sell_vol_total = models.BigIntegerField(null=True, blank=True, db_column="foreign_sell_vol_total")
     foreign_buy_val_total = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="foreign_buy_val_total")
@@ -117,3 +125,47 @@ class StockT0Snapshot(models.Model):
     class Meta:
         managed = False
         db_table = "stock_t0_snapshots"
+
+
+class MoneyFlowDailyClose(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    ticker = models.CharField(max_length=20)
+    trading_date = models.DateField(db_column="trading_date")
+    snapshot_slot = models.CharField(max_length=5, db_column="snapshot_slot")
+    snapshot_at = models.DateTimeField(db_column="snapshot_at")
+    active_buy_val = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="active_buy_val")
+    active_sell_val = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="active_sell_val")
+    active_buy_vol = models.BigIntegerField(null=True, blank=True, db_column="active_buy_vol")
+    active_sell_vol = models.BigIntegerField(null=True, blank=True, db_column="active_sell_vol")
+    net_flow_val = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="net_flow_val")
+    net_flow_vol = models.BigIntegerField(null=True, blank=True, db_column="net_flow_vol")
+    total_match_val = models.DecimalField(max_digits=24, decimal_places=4, null=True, blank=True, db_column="total_match_val")
+    total_match_vol = models.BigIntegerField(null=True, blank=True, db_column="total_match_vol")
+    raw_payload = models.TextField(null=True, blank=True, db_column="raw_payload")
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "money_flow_daily_close"
+
+
+class MoneyFlowFeatureSnapshot(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    entity_type = models.CharField(max_length=20, db_column="entity_type")
+    entity_id = models.CharField(max_length=100, db_column="entity_id")
+    trading_date = models.DateField(db_column="trading_date")
+    window_type = models.CharField(max_length=20, db_column="window_type")
+    snapshot_slot = models.CharField(max_length=5, null=True, blank=True, db_column="snapshot_slot")
+    as_of_at = models.DateTimeField(db_column="as_of_at")
+    feature_payload = models.TextField(null=True, blank=True, db_column="feature_payload")
+    history_days_used = models.IntegerField(null=True, blank=True, db_column="history_days_used")
+    history_baseline_days = models.IntegerField(null=True, blank=True, db_column="history_baseline_days")
+    history_min_days_for_stable = models.IntegerField(null=True, blank=True, db_column="history_min_days_for_stable")
+    low_history_confidence = models.BooleanField(default=False, db_column="low_history_confidence")
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "money_flow_feature_snapshots"

@@ -103,7 +103,16 @@ export async function ensureFreshSession(force = false): Promise<string | null> 
     return accessToken;
   }
 
-  return (await refreshAccessToken()) ?? getAccessToken();
+  const refreshedToken = await refreshAccessToken();
+  if (refreshedToken) {
+    return refreshedToken;
+  }
+
+  const latestAccessToken = getAccessToken();
+  if (latestAccessToken && !isTokenExpiringSoon(latestAccessToken, 0) && !force) {
+    return latestAccessToken;
+  }
+  return null;
 }
 
 apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {

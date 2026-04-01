@@ -7,6 +7,7 @@ from enum import Enum
 
 from django.db.models import Max
 
+from apps.stocks import money_flow_service as money_flow_services
 from apps.stocks.models import StockHistory, StockSymbol
 from apps.stocks.ssi_history_client import SsiHistoryClient
 from apps.stocks.ssi_history_parser import parse_history_payload
@@ -79,6 +80,7 @@ def run_history_sync(
     processed_symbols = 0
     failed_symbols = 0
     records_updated = 0
+    affected_dates: set[date] = set()
     days = HISTORY_BOOTSTRAP_SESSIONS if mode == HistorySyncMode.RESET else HISTORY_INCREMENTAL_OVERLAP_DAYS
 
     if mode == HistorySyncMode.RESET:
@@ -96,6 +98,7 @@ def run_history_sync(
                 StockHistory.objects.filter(ticker=ticker, trading_date__gte=plan.from_date, trading_date__lte=today).delete()
             if parsed.histories:
                 StockHistory.objects.bulk_create(parsed.histories, batch_size=500)
+                affected_dates.update(item.trading_date for item in parsed.histories)
             records_updated += len(parsed.histories)
             processed_symbols += 1
             update_status(True, mode, days, total_symbols, processed_symbols, failed_symbols, records_updated, "Syncing", None, None)
@@ -103,6 +106,11 @@ def run_history_sync(
             failed_symbols += 1
             update_status(True, mode, days, total_symbols, processed_symbols, failed_symbols, records_updated, "Syncing", str(exc), ticker)
 
+    for affected_date in sorted(affected_dates):
+        try:
+            money_flow_services.rebuild_money_flow_eod_features(affected_date)
+        except Exception:
+            pass
     update_status(False, mode, days, total_symbols, processed_symbols, failed_symbols, records_updated, "Completed", None, None)
 
 
@@ -154,6 +162,11 @@ def resync_ticker_history(
             trading_date__lte=max_date,
         ).delete()
         StockHistory.objects.bulk_create(histories_out, batch_size=500)
+        for affected_date in sorted({item.trading_date for item in histories_out}):
+            try:
+                money_flow_services.rebuild_money_flow_eod_features(affected_date)
+            except Exception:
+                pass
 
     update_status(
         False,
